@@ -223,10 +223,11 @@ const App: React.FC = () => {
                     onChange={(value) => setCollection(value)}
                   >
                     <Option value="highways">Highways</Option>
-                    <Option value="trunk">Trunk</Option>
+                    <Option value="trunks">Trunk</Option>
                   </Select>
                 </Form.Item>
               </Space.Compact>
+              <span style={{ marginLeft: 10 }}>{highways.length}</span>
             </Form.Item>
             <Form.Item label="Tốc độ" style={{ marginBottom: 0 }}>
               <Form.Item
@@ -315,8 +316,12 @@ const App: React.FC = () => {
                 />
                 {highways?.map((ref) =>
                   ref.highways.map((highway: any) =>
-                    highway.ways.map((way: any) => (
-                      <Polygon positions={way.buffer_geometry} color="red" />
+                    highway.ways.map((way: any, index: any) => (
+                      <Polygon
+                        key={index}
+                        positions={way.buffer_geometry}
+                        color="red"
+                      />
                     ))
                   )
                 )}
