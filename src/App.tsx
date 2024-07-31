@@ -1,5 +1,5 @@
 import React, { ReactNode, useEffect, useState } from "react";
-import { Button, message } from "antd";
+import { Button, message, Modal } from "antd";
 import "leaflet/dist/leaflet.css";
 import "leaflet-draw/dist/leaflet.draw.css";
 import axios from "axios";
@@ -7,6 +7,7 @@ import { Map } from "./components/Map";
 import { FormContainer } from "./components/Form";
 import { TableContainer } from "./components/Table";
 import { URL_API } from "./constant";
+import { createMessageCheckWay } from "./utils";
 
 let isHandling = false;
 
@@ -35,6 +36,7 @@ const App: React.FC = () => {
   const [messageApi, contextHolder] = message.useMessage();
   const [highways, setHighways] = useState<any[]>([]);
   const [tab, setTab] = useState<ReactNode>("map");
+  const [open, setOpen] = useState(false);
 
   useEffect(() => {
     const fetchData = async () => {
@@ -93,6 +95,7 @@ const App: React.FC = () => {
         await axios.put(`${URL_API}/${collection}/delete/${id}`, {
           indexs: [],
         });
+        handleRefresh();
       });
     }
 
@@ -116,28 +119,30 @@ const App: React.FC = () => {
     );
   };
 
+  const handleOk = async () => {
+    setLoading(true);
+    const res = await axios.post(`${URL_API}/${collection}`, fields[0]);
+    setLoading(false);
+    console.log(res);
+    if (res.status === 200) {
+      messageApi.open({
+        type: "success",
+        content: "Thêm thành công",
+      });
+    } else {
+      messageApi.open({
+        type: "error",
+        content: "Thêm thất bại",
+      });
+    }
+  };
+
+  const handleCancel = () => {
+    setOpen(false);
+  };
+
   const onFinish = () => {
-    const sendData = async () => {
-      setLoading(true);
-      const res = await axios.post(`${URL_API}/${collection}`, fields[0]);
-      setLoading(false);
-      console.log(res);
-      if (res.status === 200) {
-        messageApi.open({
-          type: "success",
-          content: "Thêm thành công",
-        });
-      } else {
-        messageApi.open({
-          type: "error",
-          content: "Thêm thất bại",
-        });
-      }
-    };
-
-    sendData();
-
-    console.log("Received values of form: ", fields);
+    setOpen(true);
   };
 
   return (
@@ -206,6 +211,15 @@ const App: React.FC = () => {
           </div>
         </div>
       </div>
+      <Modal
+        title="Thêm tuyến đường"
+        open={open}
+        onOk={handleOk}
+        confirmLoading={loading}
+        onCancel={handleCancel}
+      >
+        <p>{createMessageCheckWay(highways, fields[0])}</p>
+      </Modal>
     </>
   );
 };

@@ -105,7 +105,6 @@ const TableContainer: React.FC<{
           .filter((index) => index !== null)
       )
       .flat();
-    console.log([...rowIsDelete, ...rowIsDeleteChild]);
 
     setRowIsDeletes([...rowIsDelete, ...rowIsDeleteChild]);
 
