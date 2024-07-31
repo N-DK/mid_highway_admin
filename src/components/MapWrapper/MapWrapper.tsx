@@ -46,7 +46,7 @@ const MapWrapper: React.FC<{
         zoom={13}
         scrollWheelZoom={true}
         zoomControl={false}
-        style={{ width: "1200px", height: "90vh" }}
+        style={{ width: "100%", height: "90vh" }}
       >
         {googleLayer}
         {children}
