@@ -1,30 +1,34 @@
-import React, { useMemo, useState } from "react";
-import { MapContainer, Marker, Popup, useMapEvents } from "react-leaflet";
-import ReactLeafletGoogleLayer from "react-leaflet-google-layer";
-const LocationFinderDummy = () => {
-  const [currentPos, setCurrentPos] = useState<[number, number]>();
+import React, { useMemo, useState, useCallback } from "react";
+import {
+  MapContainer,
+  Marker,
+  Popup,
+  TileLayer,
+  useMapEvents,
+} from "react-leaflet";
+import ReactLeafletGoogleLayer from "react-leaflet-google-layer"; // Uncomment if using Google Layer
 
-  const map = useMapEvents({
-    contextmenu(e) {
+const LocationFinderDummy = React.memo(() => {
+  const [currentPos, setCurrentPos] = useState<[number, number] | null>(null);
+
+  useMapEvents({
+    contextmenu: useCallback((e: any) => {
       setCurrentPos([
-        Number(Number(e.latlng.lat).toFixed(7)),
-        Number(Number(e.latlng.lng).toFixed(7)),
+        parseFloat(e.latlng.lat.toFixed(7)),
+        parseFloat(e.latlng.lng.toFixed(7)),
       ]);
-    },
+    }, []),
   });
 
-  return (
-    <>
-      {currentPos && (
-        <Marker position={currentPos} draggable={true}>
-          <Popup position={currentPos}>
-            Current location: {`lat=${currentPos[0]}&lng=${currentPos[1]}`}
-          </Popup>
-        </Marker>
-      )}
-    </>
-  );
-};
+  return currentPos ? (
+    <Marker position={currentPos} draggable>
+      <Popup>
+        Current location: lat={currentPos[0]}, lng={currentPos[1]}
+      </Popup>
+    </Marker>
+  ) : null;
+});
+
 const MapWrapper: React.FC<{
   children: React.ReactNode;
   center: [number, number];
@@ -33,31 +37,31 @@ const MapWrapper: React.FC<{
     () => (
       <ReactLeafletGoogleLayer
         apiKey="AIzaSyA8A9yPeigR3I485ayAHKniugLw3OqXlS4"
-        type={"hybrid"}
+        type="hybrid"
       />
+      // <TileLayer
+      //   attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+      //   url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
+      // />
     ),
     []
   );
 
-  const mapContainer = useMemo(
-    () => (
+  return (
+    <div style={{ height: "100%" }}>
       <MapContainer
         center={center}
         zoom={13}
-        scrollWheelZoom={true}
+        scrollWheelZoom
         zoomControl={false}
         style={{ width: "100%", height: "90vh" }}
       >
         {googleLayer}
         {children}
-
         <LocationFinderDummy />
       </MapContainer>
-    ),
-    [center, googleLayer, children]
+    </div>
   );
-
-  return <div style={{ height: "100%" }}>{mapContainer}</div>;
 };
 
 export default MapWrapper;

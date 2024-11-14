@@ -5,6 +5,7 @@ import {
   Form,
   Input,
   InputNumber,
+  message,
   Modal,
   Popconfirm,
   Table,
@@ -19,10 +20,13 @@ interface DataType {
   key: any;
   ref: string;
   highways: {
+    id: any;
     highway_name: string;
     maxSpeed: string | number;
     minSpeed: string | number;
     ways: {
+      name: string;
+      id: any;
       nodes: [];
       maxSpeed: string | number;
       minSpeed: string | number;
@@ -64,7 +68,7 @@ const EditableCell: React.FC<React.PropsWithChildren<EditableCellProps>> = ({
           style={{ margin: 0 }}
           rules={[
             {
-              required: true,
+              required: false,
               message: `Please Input ${title}!`,
             },
           ]}
@@ -83,7 +87,8 @@ const TableContainer: React.FC<{
   loading: boolean;
   collection: string;
   handleRefresh: () => void;
-}> = ({ highways, loading, collection, handleRefresh }) => {
+  keyWayEdit: any;
+}> = ({ highways, loading, collection, handleRefresh, keyWayEdit }) => {
   const [form] = Form.useForm();
   const [editingKey, setEditingKey] = useState("");
   const [data, setData] = useState(highways ?? []);
@@ -93,6 +98,10 @@ const TableContainer: React.FC<{
   const [modalText, setModalText] = useState("Content of the modal");
   const [idDelete, setIdDelete] = useState<string[] | null>(null);
   const [keyDelete, setKeyDelete] = useState<string>("");
+  const [currenPage, setCurrentPage] = useState(1);
+  const [expandedRowKeys, setExpandedRowKeys] = useState<any>([]);
+  const [messageApi, contextHolder] = message.useMessage();
+  const pageSize = 10;
 
   useEffect(() => {
     const rowIsDelete = highways
@@ -109,21 +118,32 @@ const TableContainer: React.FC<{
     setRowIsDeletes([...rowIsDelete, ...rowIsDeleteChild]);
 
     setData(
-      highways.map((item, i) => ({
+      highways.map((item) => ({
         ...item,
-        key: `${i}`,
-        children: item.highways.map((highway, j) => ({
-          key: `${i}-${j}`,
+        key: `${item.id}`,
+        children: item.highways.map((highway) => ({
+          key: `${item.id}-${highway.id}`,
           ...highway,
           maxSpeed: highway.maxSpeed,
           minSpeed: highway.minSpeed,
+          children: highway.ways.map((way) => ({
+            key: `${item.id}-${highway.id}-${way.id}`,
+            ...way,
+            highway_name: way.name ?? "",
+            maxSpeed: way.maxSpeed,
+            minSpeed: way.minSpeed,
+          })),
         })),
       }))
     );
   }, [highways]);
 
+  useEffect(() => {
+    handleFindRow();
+  }, [keyWayEdit]);
+
   const showModal = (key: string) => {
-    setModalText("Are you sure?");
+    setModalText("Are you sure? " + key);
     const ids = key.split("-");
     setKeyDelete(key);
     setIdDelete(ids);
@@ -144,26 +164,32 @@ const TableContainer: React.FC<{
   const save = async (key: React.Key) => {
     try {
       const row = await form.validateFields();
-
-      const newData = [...data];
-      const keyParent = key.toString().split("-")[0];
-      const index = newData.findIndex((item) => keyParent === item.key);
-      const indexChild = newData[index]?.children.findIndex(
-        (item: any) => key === item.key
+      const keys = key.toString().split("-");
+      const keyParent = Number(keys[0]);
+      const res = await axios.put(
+        `${URL_API}/${collection}/update/${keyParent}`,
+        {
+          key: `${
+            keys.length === 2 ? `${keys?.[1]}` : `${keys?.[1]}-${keys?.[2]}`
+          }`,
+          max_speed: Number(row?.maxSpeed),
+          min_speed: Number(row?.minSpeed),
+          name: row?.highway_name.trim() === "" ? undefined : row?.highway_name,
+        }
       );
-      // newData[index].children[indexChild] = {
-      //   ...newData[index].children[indexChild],
-      //   maxSpeed: Number(row?.maxSpeed),
-      //   minSpeed: Number(row?.minSpeed),
-      // };
-      // setData(newData);
-      await axios.put(`${URL_API}/${collection}/update/${index}`, {
-        index: indexChild,
-        max_speed: Number(row?.maxSpeed),
-        min_speed: Number(row?.minSpeed),
-      });
       setEditingKey("");
-      handleRefresh();
+      if (res.status === 200) {
+        messageApi.open({
+          type: "success",
+          content: "Sửa thành công",
+        });
+      } else {
+        messageApi.open({
+          type: "error",
+          content: "Sửa thất bại",
+        });
+      }
+      // handleRefresh();
     } catch (errInfo) {
       console.log("Validate Failed:", errInfo);
     }
@@ -174,15 +200,27 @@ const TableContainer: React.FC<{
     const fetch = async () => {
       try {
         setConfirmLoading(true);
-        await axios.put(
+        const res = await axios.put(
           `${URL_API}/${collection}/${type}/${idDelete?.[0] ?? ""}`,
           {
             indexs: idDelete?.[1] ? [Number(idDelete?.[1])] : [],
+            indexsWay: idDelete?.[2] ? [Number(idDelete?.[2])] : [],
           }
         );
         setOpen(false);
         setConfirmLoading(false);
-        handleRefresh();
+        if (res.status === 200) {
+          messageApi.open({
+            type: "success",
+            content: `${type} thành công`,
+          });
+        } else {
+          messageApi.open({
+            type: "error",
+            content: "Xóa thất bại",
+          });
+        }
+        // handleRefresh();
       } catch (error) {
         console.error(error);
       }
@@ -210,6 +248,7 @@ const TableContainer: React.FC<{
       title: "Tên tuyến đường",
       dataIndex: "highway_name",
       key: "highway_name",
+      editable: true,
     },
     {
       title: "Tốc độ tối đa",
@@ -277,8 +316,44 @@ const TableContainer: React.FC<{
     };
   });
 
+  const handleFindRow = () => {
+    if (!keyWayEdit) return;
+    const key = keyWayEdit?.split("-");
+    const rowIndex = data.findIndex((item) => item.id === Number(key[0]));
+    if (rowIndex === -1) {
+      return;
+    }
+    const pageIndex = Math.floor(rowIndex / pageSize) + 1;
+    setCurrentPage(pageIndex);
+  };
+
+  const handleExpand = (expanded: any, record: any) => {
+    const newExpandedRowKeys = expanded
+      ? [...expandedRowKeys, record.key]
+      : expandedRowKeys.filter((key: any) => key !== record.key);
+
+    setExpandedRowKeys(newExpandedRowKeys);
+  };
+
+  const generateHierarchicalSegments = (key: string) => {
+    if (!key) return [];
+    const parts = key.split("-");
+    return parts.map((_: any, index: any) =>
+      parts.slice(0, index + 1).join("-")
+    );
+  };
+
+  useEffect(() => {
+    const defaultExpandedKeys = generateHierarchicalSegments(keyWayEdit);
+
+    if (defaultExpandedKeys.length > 0) {
+      setExpandedRowKeys(defaultExpandedKeys as any);
+    }
+  }, [keyWayEdit]);
+
   return (
     <>
+      {contextHolder}
       <Form form={form} component={false}>
         <Table
           loading={loading}
@@ -291,9 +366,20 @@ const TableContainer: React.FC<{
           dataSource={data}
           columns={mergedColumns}
           rowSelection={{ selectedRowKeys: rowIsDeletes }}
-          rowClassName="editable-row"
           pagination={{
-            onChange: cancel,
+            current: currenPage,
+            pageSize: pageSize,
+            onChange: (page) => {
+              cancel();
+              setCurrentPage(page);
+            },
+          }}
+          rowClassName={(record, _) =>
+            record.key === keyWayEdit ? "active" : ""
+          }
+          expandable={{
+            expandedRowKeys,
+            onExpand: handleExpand,
           }}
         />
       </Form>
