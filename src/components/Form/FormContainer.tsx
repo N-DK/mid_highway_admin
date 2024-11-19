@@ -1,13 +1,15 @@
 import {
   Button,
+  Col,
   Form,
   Input,
   Pagination,
+  Row,
   Select,
   Space,
   Typography,
 } from "antd";
-import { useEffect, useState, useMemo } from "react";
+import { useEffect, useState, useMemo, useRef } from "react";
 
 const { Paragraph } = Typography;
 
@@ -143,9 +145,73 @@ const nationalHighways = [
   "QL.2D",
   "QL.49C",
   "QL.10",
+  "QL.31",
+  "QL.40B",
+  "QL.50",
+  "QL.51",
+  "QL.4A",
+  "QL.7C",
+  "QL.34B",
+  "QL.14", // note: it needs update
+  "QL.5",
+  "QL.6C",
+  "N/A",
+  "QL.24",
+  "QL.49B",
+  "QL.14C",
+  "QL.46",
+  "QL.55",
+  "QL.70",
+  "QL.20",
+  "QL.25",
+  "QL.22",
+  "QL.91",
+  "QL.39",
+  "QL.54",
+  "QL.80",
+  "QL.61",
+  "QL.57",
+  "QL.49",
+  "QL.12A",
+  "QL.34",
+  "QL.32",
+  "QL.37",
+  "QL.6",
+  "QL.3",
+  "QL.18",
+  "QL.16",
+  "HCM",
+  "DHCM",
+  "HCM;QL.217",
+  "QL.21;HCM",
+  "QL.9;DHCM",
+  "HCM;QL.12B",
+  "HCM;ĐT.203",
+  "HCM;QL.3",
+  "DHCM;QL.12A;QL.15",
+  "QL.1",
+  "QL.14;DHCM",
+  "HCM;QL.15",
+  "QL.16;HCM",
+  "QL.9;HCM",
+  "HCM;QL.9",
+  "HCM;QL.281",
+  "HCM;QL.9B",
+  "HCM;QL.15;QL.9E",
+  "CT.02;QL.14;DHCM",
+  "QL.14;DHCM;AH17",
+  "DHCM;CT.02",
+  "HCM;QL.15;QL.9B",
+  "HCM;QL.3;QL.279",
+  "DHCM;QL.46",
+  "QL.N2;QL.30B",
+  "CT.02;HCM",
+  "QL.N2;ĐT.941",
+  "QL.N2;ĐT.970",
+  "QL.14;HCM;QL.19",
+  "QL.14;HCM",
+  "DHCM;QL.15",
 ];
-
-console.log(nationalHighways?.length);
 
 const FormContainer: React.FC<FormContainerProps> = ({
   onFinish,
@@ -159,6 +225,13 @@ const FormContainer: React.FC<FormContainerProps> = ({
 }) => {
   const [data, setData] = useState<any[]>([]);
   const [selectedItems, setSelectedItems] = useState<string[]>([]);
+  const ref = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (ref.current) {
+      ref.current.scrollLeft = ref.current.scrollWidth;
+    }
+  }, [ref]);
 
   useEffect(() => {
     const filteredHighways = selectedItems
@@ -196,11 +269,12 @@ const FormContainer: React.FC<FormContainerProps> = ({
 
   return (
     <div
+      ref={ref}
       style={{
         width: "350px",
         alignItems: "center",
         maxHeight: "90vh",
-        overflow: "auto",
+        overflow: "hidden",
         marginRight: 100,
       }}
     >
@@ -222,14 +296,12 @@ const FormContainer: React.FC<FormContainerProps> = ({
               highways: [
                 {
                   highway_name: allFields[1]?.value || "",
-                  ways: [
-                    {
-                      nodes: fields[0]?.highways[0]?.ways[0]?.nodes,
-                      lanes: "",
-                      maxSpeed: allFields[3]?.value || "",
-                      minSpeed: allFields[4]?.value || "",
-                    },
-                  ],
+                  ways: fields[0]?.highways[0]?.ways?.map((way: any) => ({
+                    nodes: way.nodes,
+                    lanes: allFields[2]?.value || "",
+                    maxSpeed: allFields[3]?.value || "",
+                    minSpeed: allFields[4]?.value || "",
+                  })),
                 },
               ],
             },
@@ -263,7 +335,9 @@ const FormContainer: React.FC<FormContainerProps> = ({
               { value: "tollboths", label: "TollBoths" },
             ]}
           />
-          <span style={{ marginLeft: 10 }}>{data.length}</span>
+          <p style={{ marginLeft: 10, marginTop: 10, marginBottom: 0 }}>
+            {data.length}
+          </p>
         </Form.Item>
 
         <Form.Item label="Tốc độ" style={{ marginBottom: 0 }}>
@@ -271,14 +345,14 @@ const FormContainer: React.FC<FormContainerProps> = ({
             <Form.Item
               name="max_speed"
               rules={[{ required: true, message: "Không được rỗng" }]}
-              style={{ width: "50%" }}
+              style={{ width: "100%" }}
             >
               <Input placeholder="Tốc độ tối đa" />
             </Form.Item>
             <Form.Item
               name="min_speed"
               rules={[{ required: true, message: "Không được rỗng" }]}
-              style={{ width: "50%", marginLeft: 8 }}
+              style={{ width: "100%", marginLeft: 8 }}
             >
               <Input placeholder="Tốc độ tối thiểu" />
             </Form.Item>
@@ -300,17 +374,40 @@ const FormContainer: React.FC<FormContainerProps> = ({
           </Space>
         </Form.Item>
 
-        <Form.Item>
-          <Select
-            mode="multiple"
-            placeholder="Inserted are removed"
-            value={selectedItems}
-            onChange={setSelectedItems}
-            style={{ width: "100%" }}
-            options={filteredOptions}
-          />
-        </Form.Item>
+        <div style={{ display: "flex", position: "relative" }}>
+          <Form.Item label="Select" style={{ width: "100%" }}>
+            <Select
+              mode="multiple"
+              placeholder="Inserted are removed"
+              value={selectedItems}
+              onChange={setSelectedItems}
+              style={{ width: "100%" }}
+              options={filteredOptions}
+            />
+          </Form.Item>
+          <Button
+            onClick={() => {
+              setFields([
+                {
+                  ref: "",
+                  highways: [
+                    {
+                      highway_name: "",
+                      ways: [
+                        { nodes: [], lanes: "", maxSpeed: "", minSpeed: "" },
+                      ],
+                    },
+                  ],
+                },
+              ]);
+            }}
+            style={{ position: "absolute", right: "0px", top: "80%" }}
+          >
+            Clear
+          </Button>
+        </div>
       </Form>
+
       <Paragraph
         style={{
           marginTop: 24,

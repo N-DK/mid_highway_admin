@@ -64,17 +64,16 @@ const App: React.FC = () => {
     setFields((prev) =>
       prev.map((field) => ({
         ...field,
-        highways: [
-          {
-            ...field.highways[0],
-            ways: [
-              {
-                ...field.highways[0].ways[0],
-                nodes: updateNodes(field.highways[0].ways[0].nodes),
-              },
-            ],
-          },
-        ],
+        highways: field.highways.map((highway: any) => ({
+          ...highway,
+          ways: [
+            ...highway.ways?.filter((way: any) => way.nodes.length > 1),
+            {
+              ...highway.ways[0],
+              nodes: updateNodes(highway.ways[0].nodes),
+            },
+          ],
+        })),
       }))
     );
   }, []);

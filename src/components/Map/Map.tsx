@@ -154,6 +154,9 @@ const Map = ({
               onCreated={handleCreated}
               onDeleted={handleDeleted}
               onEdited={handleEdited}
+              edit={{
+                edit: false,
+              }}
             />
             {highways
               ?.filter((high) => high.isDelete !== 1)
